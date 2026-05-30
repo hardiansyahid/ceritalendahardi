@@ -1,6 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import greetings from "@/data/greetings.json";
+
+const DEFAULT_GREETING = "Yth. Bapak/Ibu";
+const GREETING_MAP = greetings as Record<string, string>;
+
+function getGreetingTextFromPathname(pathname: string): string {
+  const greetingId = pathname.split("/").filter(Boolean)[0];
+
+  if (!greetingId) {
+    return DEFAULT_GREETING;
+  }
+
+  return GREETING_MAP[greetingId] || DEFAULT_GREETING;
+}
 
 // Helper: load a single external script, returns a Promise
 function loadScript(src: string): Promise<void> {
@@ -49,6 +63,7 @@ export default function Home() {
 
     const fallbackLoaderTimer = window.setTimeout(hideLoader, 12000);
     const guestName = new URLSearchParams(window.location.search).get("name")?.trim().replace(/\s+/g, " ").slice(0, 80);
+    const greetingText = getGreetingTextFromPathname(window.location.pathname);
     let removeGuestGreetingClick: (() => void) | undefined;
 
     if (guestName) {
@@ -67,7 +82,7 @@ export default function Home() {
 
         const salutation = document.createElement("span");
         salutation.className = "greeting-text";
-        salutation.textContent = "Yth. Bapak/Ibu";
+        salutation.textContent = greetingText;
 
         const name = document.createElement("h6");
         name.className = "greeting-name-text";
