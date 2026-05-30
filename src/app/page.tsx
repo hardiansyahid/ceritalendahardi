@@ -6,11 +6,22 @@ import { useEffect, useState } from "react";
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve) => {
     const script = document.createElement("script");
+    let isResolved = false;
+    const resolveOnce = () => {
+      if (isResolved) {
+        return;
+      }
+      isResolved = true;
+      resolve();
+    };
+
     script.src = src;
     script.async = false;
-    script.onload = () => resolve();
-    script.onerror = () => resolve();
+    script.onload = resolveOnce;
+    script.onerror = resolveOnce;
     document.body.appendChild(script);
+
+    window.setTimeout(resolveOnce, 15000);
   });
 }
 
@@ -23,7 +34,20 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    if (!mounted) {
+      const mountTimer = window.setTimeout(() => setMounted(true), 0);
+      return () => {
+        window.clearTimeout(mountTimer);
+      };
+    }
+
+    const hideLoader = () => {
+      document.querySelectorAll<HTMLElement>(".loader-wrapper").forEach((loader) => {
+        loader.style.visibility = "hidden";
+      });
+    };
+
+    const fallbackLoaderTimer = window.setTimeout(hideLoader, 12000);
 
     const inlineScripts: { type: string; code: string }[] = [
       { type: "text/javascript", code: `const APP_URL = "https://viding.co/domain/ceritalendahardi.viding.co";
@@ -36,15 +60,35 @@ export default function Home() {
     		"image": "https://media.viding.co/dmlkaW5nIGNvIGltYWdlIHByb3h5IGJ5IGZseS5pbw/rs:auto:0:0:1/g:no/.jpeg",
     		"thumbnailUrl": "https://media.viding.co/dmlkaW5nIGNvIGltYWdlIHByb3h5IGJ5IGZseS5pbw/rs:auto:650:366:1/g:no/.jpeg"
     	}` },
-      { type: "text/javascript", code: `document.onreadystatechange = () => {
-                if (document.readyState !== "complete") {
-                    document.querySelector(".loader-wrapper").style.visibility = "visible";
-                } else {
-                    document.querySelector(".loader-wrapper").style.visibility = "hidden";
+      { type: "text/javascript", code: `const hideAppLoader = () => {
+                document.querySelectorAll(".loader-wrapper").forEach((loader) => {
+                    loader.style.visibility = "hidden";
+                });
+            };
+
+            const initializeInvitationApp = () => {
+                hideAppLoader();
+
+                if (typeof runAnimationOrnamentCover === "function") {
                     runAnimationOrnamentCover();
+                }
+                if (typeof fontFix === "function") {
                     fontFix();
                 }
-            };` },
+            };
+
+            if (document.readyState === "complete") {
+                initializeInvitationApp();
+            } else {
+                document.onreadystatechange = () => {
+                    if (document.readyState === "complete") {
+                        initializeInvitationApp();
+                    }
+                };
+                window.addEventListener("load", initializeInvitationApp, { once: true });
+            }
+
+            window.setTimeout(hideAppLoader, 12000);` },
       { type: "text/javascript", code: `var stepper_id = 30664
         var guest_type = "regular"
         var invitation_lang = "id"` },
@@ -882,10 +926,17 @@ export default function Home() {
           console.error("Error executing inline script:", err);
         }
       }
+
+      hideLoader();
+      window.clearTimeout(fallbackLoaderTimer);
     };
 
     loadScripts();
-  }, []);
+
+    return () => {
+      window.clearTimeout(fallbackLoaderTimer);
+    };
+  }, [mounted]);
 
   if (!mounted) {
     return (
