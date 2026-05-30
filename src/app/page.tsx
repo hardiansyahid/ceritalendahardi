@@ -383,7 +383,12 @@ export default function Home() {
         }
     });` },
       { type: "text/javascript", code: `if (document.querySelector(".gallery-section-4")) {
-                document.addEventListener("DOMContentLoaded", function() {
+                const initializeGallery4 = function() {
+                    if (window.__gallery4Initialized) {
+                        return;
+                    }
+                    window.__gallery4Initialized = true;
+
                     const splide = new Splide("#gallery-4", {
                         pagination: false,
                         focus: 0,
@@ -410,21 +415,29 @@ export default function Home() {
                     if (typeof AOS !== 'undefined') {
                         AOS.refresh();
                     }
-                });
+                };
+
+                if (document.readyState === "loading") {
+                    document.addEventListener("DOMContentLoaded", initializeGallery4);
+                } else {
+                    initializeGallery4();
+                }
             }
 
-            \$("#zoom-gallery-4").magnificPopup({
-                delegate: "li a",
-                type: "image",
-                mainClass: "mfp-with-zoom mfp-img-mobile",
-                gallery: {
-                    enabled: true,
-                },
-                zoom: {
-                    enabled: true,
-                    easing: "ease-in-out",
-                },
-            });` },
+            if (window.jQuery && \$.fn.magnificPopup) {
+                \$("#zoom-gallery-4").magnificPopup({
+                    delegate: "li a",
+                    type: "image",
+                    mainClass: "mfp-with-zoom mfp-img-mobile",
+                    gallery: {
+                        enabled: true,
+                    },
+                    zoom: {
+                        enabled: true,
+                        easing: "ease-in-out",
+                    },
+                });
+            }` },
       { type: "text/javascript", code: `if (document.querySelector(".gallery-default")) {
             const gallery = new Splide("#gallery-default", {
                 pagination: true,
