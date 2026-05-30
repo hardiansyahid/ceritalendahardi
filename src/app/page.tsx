@@ -48,6 +48,93 @@ export default function Home() {
     };
 
     const fallbackLoaderTimer = window.setTimeout(hideLoader, 12000);
+    const guestName = new URLSearchParams(window.location.search).get("name")?.trim().replace(/\s+/g, " ").slice(0, 80);
+    let removeGuestGreetingClick: (() => void) | undefined;
+
+    if (guestName) {
+      const guestWindow = window as Window & { __showGuestQueryGreeting?: () => void };
+
+      const createGreeting = () => {
+        const existingGreeting = document.querySelector<HTMLElement>(".guest-query-greeting");
+        if (existingGreeting) {
+          return existingGreeting;
+        }
+
+        const greeting = document.createElement("div");
+        greeting.className = "greeting-wrapper guest-query-greeting";
+        greeting.dataset.anim = "zoom-out";
+        greeting.setAttribute("aria-live", "polite");
+
+        const salutation = document.createElement("span");
+        salutation.className = "greeting-text";
+        salutation.textContent = "Yth. Bapak/Ibu";
+
+        const name = document.createElement("h6");
+        name.className = "greeting-name-text";
+        name.textContent = guestName;
+
+        greeting.append(salutation, name);
+        return greeting;
+      };
+
+      const placeGreeting = () => {
+        const greeting = createGreeting();
+        const target = document.querySelector(".cover-description");
+        const weddingLabel = target?.querySelector(".position-relative");
+
+        if (target && !greeting.parentElement) {
+          target.insertBefore(greeting, weddingLabel ?? target.firstChild);
+        }
+
+        return greeting;
+      };
+
+      const showGuestGreeting = () => {
+        const greeting = placeGreeting();
+        greeting.classList.add("has-animate");
+        greeting.dataset.loadAnimation = "true";
+        window.requestAnimationFrame(() => {
+          greeting.classList.add("guest-query-greeting--visible");
+        });
+      };
+      guestWindow.__showGuestQueryGreeting = showGuestGreeting;
+
+      const onGuestGreetingOpen = (event: Event) => {
+        if (!(event.target instanceof Element)) {
+          return;
+        }
+
+        if (event.target.closest("#btn-envelope, #btn-cover, #closeEnvelope")) {
+          showGuestGreeting();
+          document.removeEventListener("click", onGuestGreetingOpen, true);
+          document.removeEventListener("pointerdown", onGuestGreetingOpen, true);
+        }
+      };
+
+      const openTriggers = Array.from(document.querySelectorAll("#btn-envelope, #btn-cover, #closeEnvelope"));
+
+      placeGreeting();
+      window.setTimeout(showGuestGreeting, 300);
+      document.addEventListener("click", onGuestGreetingOpen, true);
+      document.addEventListener("pointerdown", onGuestGreetingOpen, true);
+      openTriggers.forEach((trigger) => {
+        trigger.addEventListener("click", showGuestGreeting, { once: true });
+        trigger.addEventListener("pointerdown", showGuestGreeting, { once: true });
+        trigger.addEventListener("touchend", showGuestGreeting, { once: true });
+      });
+      removeGuestGreetingClick = () => {
+        document.removeEventListener("click", onGuestGreetingOpen, true);
+        document.removeEventListener("pointerdown", onGuestGreetingOpen, true);
+        openTriggers.forEach((trigger) => {
+          trigger.removeEventListener("click", showGuestGreeting);
+          trigger.removeEventListener("pointerdown", showGuestGreeting);
+          trigger.removeEventListener("touchend", showGuestGreeting);
+        });
+        if (guestWindow.__showGuestQueryGreeting === showGuestGreeting) {
+          delete guestWindow.__showGuestQueryGreeting;
+        }
+      };
+    }
 
     const inlineScripts: { type: string; code: string }[] = [
       { type: "text/javascript", code: `const APP_URL = "https://viding.co/domain/ceritalendahardi.viding.co";
@@ -340,6 +427,9 @@ export default function Home() {
 
     document.querySelectorAll('#closeEnvelope, #btn-envelope, #btn-cover').forEach(el => {
         el.addEventListener('click', function () {
+            if (typeof window.__showGuestQueryGreeting === "function") {
+                window.__showGuestQueryGreeting();
+            }
             loadYT();
             if (el.id === 'btn-envelope' && audio) {
                 audio.play().catch(e => console.log('Audio play failed:', e));
@@ -935,6 +1025,7 @@ export default function Home() {
 
     return () => {
       window.clearTimeout(fallbackLoaderTimer);
+      removeGuestGreetingClick?.();
     };
   }, [mounted]);
 
